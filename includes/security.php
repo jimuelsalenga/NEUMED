@@ -40,3 +40,27 @@ function home_for_role(string $role): string {
         default:                   return 'admin_dashboard.php';
     }
 }
+
+/**
+ * Block pages from people who aren't logged in (or have the wrong role).
+ * Usage: require_login();                  // any logged-in user
+ *        require_login(['Student']);       // students only
+ */
+function require_login(array $roles = []): void {
+    if (!isset($_SESSION['user_id'], $_SESSION['role'])) {
+        header("Location: index.php");
+        exit();
+    }
+    if ($roles && !in_array($_SESSION['role'], $roles, true)) {
+        header("Location: " . home_for_role($_SESSION['role']));
+        exit();
+    }
+}
+
+/** True if $input matches the stored password (hashed, or legacy plain text). */
+function password_matches(string $stored, string $input): bool {
+    if (password_verify($input, $stored)) {
+        return true;
+    }
+    return empty(password_get_info($stored)['algo']) && hash_equals($stored, $input);
+}

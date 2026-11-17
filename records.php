@@ -1,24 +1,26 @@
 <?php
-session_start();
-include('includes/db_conn.php');
+require_once 'includes/security.php';
+require_once 'includes/db_conn.php';
+require_once 'includes/status.php';
+require_login(['Student']);
 
-if (!isset($_SESSION['role']) || $_SESSION['role'] !== 'Student') {
-    header("Location: index.php");
-    exit();
-}
+$student_id = (int)$_SESSION['user_id'];
 
-$student_id = $_SESSION['user_id'];
-
-$query = "SELECT * FROM submissions WHERE student_id = '$student_id' ORDER BY uploaded_at DESC";
-$result = $conn->query($query);
+$stmt = $conn->prepare(
+    "SELECT id, document_type, status, remarks, uploaded_at, reviewed_at
+       FROM submissions WHERE student_id = ? ORDER BY uploaded_at DESC"
+);
+$stmt->bind_param('i', $student_id);
+$stmt->execute();
+$records = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
+$stmt->close();
 ?>
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Medical Records</title>
+    <title>Records | MediTrack</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
@@ -34,38 +36,49 @@ $result = $conn->query($query);
     </div>
 
     <div class="container mt-3">
-        <?php if ($result->num_rows > 0): ?>
-            <?php while($row = $result->fetch_assoc()): ?>
+        <?php if ($records): ?>
+            <?php foreach ($records as $row): $st = $row['status']; ?>
                 <div class="card record-card shadow-sm">
                     <div class="card-body">
                         <div class="d-flex justify-content-between align-items-start">
                             <div>
-                                <h6 class="fw-bold mb-1"><?php echo $row['document_type']; ?></h6>
+                                <h6 class="fw-bold mb-1"><?= h($row['document_type']) ?></h6>
                                 <small class="text-muted d-block mb-2">
-                                    Uploaded: <?php echo date('M d, Y', strtotime($row['uploaded_at'])); ?>
+                                    Uploaded: <?= h(date('M d, Y g:i A', strtotime($row['uploaded_at']))) ?>
                                 </small>
-                                
-                                <?php 
-                                    $status = $row['status'];
-                                    $dot_color = ($status == 'Approved') ? 'bg-success' : (($status == 'Pending') ? 'bg-warning' : 'bg-danger');
-                                ?>
-                                <small><span class="status-dot <?php echo $dot_color; ?>"></span> <?php echo $status; ?></small>
+                                <small>
+                                    <span class="status-dot bg-<?= status_color($st) ?>"></span><?= h(status_label($st)) ?>
+                                </small>
+                                <?php if ($st === 'Approved' && $row['reviewed_at']): ?>
+                                    <small class="text-muted d-block mt-1">
+                                        Approved on <?= h(date('M d, Y', strtotime($row['reviewed_at']))) ?>
+                                    </small>
+                                <?php endif; ?>
                             </div>
-                            <a href="<?php echo $row['file_path']; ?>" target="_blank" class="btn btn-light btn-sm rounded-pill px-3">View</a>
+                            <a href="view_file.php?id=<?= (int)$row['id'] ?>" target="_blank"
+                               class="btn btn-light btn-sm rounded-pill px-3">View</a>
                         </div>
-                        
-                        <?php if($row['remarks']): ?>
+
+                        <?php if (!empty($row['remarks'])): ?>
                             <div class="mt-2 p-2 bg-light rounded small text-danger">
-                                <strong>Remarks:</strong> <?php echo $row['remarks']; ?>
+                                <strong>Reviewer's note:</strong> <?= h($row['remarks']) ?>
                             </div>
+                        <?php endif; ?>
+
+                        <?php if (is_resubmit($st)): ?>
+                            <a href="upload.php?type=<?= urlencode($row['document_type']) ?>"
+                               class="btn btn-danger btn-sm rounded-pill w-100 mt-3">
+                                <i class="fas fa-rotate me-1"></i> Resubmit document
+                            </a>
                         <?php endif; ?>
                     </div>
                 </div>
-            <?php endwhile; ?>
+            <?php endforeach; ?>
         <?php else: ?>
             <div class="text-center mt-5 text-muted">
                 <i class="fas fa-folder-open fa-3x mb-3"></i>
-                <p>No records found.</p>
+                <p class="mb-3">You haven't submitted any documents yet.</p>
+                <a href="upload.php" class="btn btn-primary rounded-pill px-4">Upload a document</a>
             </div>
         <?php endif; ?>
     </div>
