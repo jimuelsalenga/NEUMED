@@ -16,12 +16,9 @@ if (!$info) {
 }
 
 $cleared = $info['cleared'];
-$qr_url = '';
 $checklist = [];
 
-if ($cleared) {
-    $qr_url = id_verify_url(make_id_token($student_id));
-} else {
+if (!$cleared) {
     // Show what is still missing
     $stmt = $conn->prepare(
         "SELECT r.req_name, s.status
@@ -87,38 +84,21 @@ if ($cleared) {
                     <div class="small mt-2"><span class="text-muted">Cleared on</span> <strong><?= h(date('F j, Y', strtotime($info['cleared_on']))) ?></strong></div>
                 <?php endif; ?>
 
-                <div class="qr-box"><div id="qr" aria-label="QR code to verify this Medical ID"></div></div>
-                <div class="small text-muted mt-2">Your professor can scan this to verify you.</div>
-                <div class="small mt-1">QR refreshes in <strong id="countdown">15:00</strong></div>
+                <div class="small text-muted mt-4">Show this screen to your professor to confirm your medical clearance.</div>
             </div>
 
             <div class="id-foot">
                 <span id="clock"></span><br>
-                A screenshot won't work: the code expires and is checked live online.
+                Status is checked live from the MediTrack server each time this page opens.
             </div>
         </div>
         <p class="text-center text-muted small mt-3">Tip: raise your screen brightness before showing this.</p>
 
-        <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
         <script>
         (function () {
-            new QRCode(document.getElementById('qr'), {
-                text: <?= json_encode($qr_url, JSON_UNESCAPED_SLASHES | JSON_HEX_TAG) ?>,
-                width: 200, height: 200,
-                colorDark: '#111111', colorLight: '#ffffff',
-                correctLevel: QRCode.CorrectLevel.M
-            });
-
-            var expires = Date.now() + <?= ID_TOKEN_TTL ?> * 1000;
-            var countdown = document.getElementById('countdown');
             var clock = document.getElementById('clock');
-
             function tick() {
-                var left = Math.max(0, Math.round((expires - Date.now()) / 1000));
-                var m = Math.floor(left / 60), s = left % 60;
-                countdown.textContent = m + ':' + (s < 10 ? '0' : '') + s;
                 clock.textContent = new Date().toLocaleString('en-PH', { dateStyle: 'medium', timeStyle: 'medium' });
-                if (left === 0) location.reload(); // get a fresh code
             }
             tick();
             setInterval(tick, 1000);
