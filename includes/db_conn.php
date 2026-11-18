@@ -10,7 +10,7 @@ $dbname = "meditrack_db";
 $conn = @new mysqli($host, $user, $pass, $dbname);
 
 if ($conn->connect_error) {
-    error_log("MediTrack DB connection failed: " . $conn->connect_error);
+    error_log("NeuMed DB connection failed: " . $conn->connect_error);
     http_response_code(500);
     die("Service temporarily unavailable. Please try again later.");
 }

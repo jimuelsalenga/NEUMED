@@ -68,7 +68,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['login'])) {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Sign In | MediTrack</title>
+    <title>Sign In | NeuMed</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
@@ -97,7 +97,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['login'])) {
         <div class="logo-box">
             <img src="img/logo.png" alt="New Era University seal">
         </div>
-        <div class="app-title">MediTrack</div>
+        <div class="app-title">NeuMed</div>
         <p class="app-subtitle">NEU Student Medical Record System</p>
 
         <?php if ($error): ?>

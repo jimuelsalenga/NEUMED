@@ -83,7 +83,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['register'])) {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Create Account | MediTrack</title>
+    <title>Create Account | NeuMed</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <style>
         :root { --primary-blue: #2563eb; --bg-gray: #f9fafb; }
@@ -105,7 +105,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['register'])) {
 <div class="register-card text-center">
     <div class="logo-box"><img src="img/logo.png" alt="New Era University seal"></div>
     <div class="app-title">Create Account</div>
-    <p class="text-muted mb-4 small">MediTrack student registration</p>
+    <p class="text-muted mb-4 small">NeuMed student registration</p>
 
     <?php if ($success): ?>
         <div class="alert alert-success py-3 small border-0" style="border-radius:12px;" role="status">
@@ -178,7 +178,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['register'])) {
                 <input class="form-check-input" type="checkbox" id="consent" name="consent" value="1" required>
                 <label class="form-check-label" for="consent">
                     I agree to the <a href="privacy_policy.php" target="_blank">Privacy Policy</a> and consent to
-                    MediTrack collecting and processing my medical documents for university clearance.
+                    NeuMed collecting and processing my medical documents for university clearance.
                 </label>
             </div>
 

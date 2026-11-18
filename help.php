@@ -26,7 +26,7 @@ $faqs = [
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Help | MediTrack</title>
+    <title>Help | NeuMed</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
 </head>
@@ -56,7 +56,7 @@ $faqs = [
             <i class="fas fa-envelope-open-text fa-2x text-primary mb-2"></i>
             <h6>Still need help?</h6>
             <p class="small text-muted mb-3">The University Clinic replies <?= h($support_hours) ?>.</p>
-            <a href="mailto:<?= h($support_email) ?>?subject=MediTrack%20help"
+            <a href="mailto:<?= h($support_email) ?>?subject=NeuMed%20help"
                class="btn btn-outline-primary btn-sm px-4 rounded-pill">Email the clinic</a>
         </div>
     </div>

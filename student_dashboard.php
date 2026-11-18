@@ -122,6 +122,34 @@ $stmt->close();
         </div>
         <?php endif; ?>
 
+        <?php if ($total > 0): ?>
+            <a href="medical_id.php" class="text-decoration-none">
+                <?php if ($cleared): ?>
+                    <div class="card border-0 shadow-sm mb-4" style="border-radius: 15px; background: #e7f7ee;">
+                        <div class="card-body d-flex align-items-center">
+                            <div class="me-3 fs-3 text-success"><i class="fas fa-qrcode"></i></div>
+                            <div class="flex-grow-1">
+                                <small class="d-block fw-bold text-dark">Medical ID</small>
+                                <small class="text-muted" style="font-size: 11px;">You're cleared. Tap to show your ID to your professor.</small>
+                            </div>
+                            <i class="fas fa-chevron-right text-success small"></i>
+                        </div>
+                    </div>
+                <?php else: ?>
+                    <div class="card border-0 shadow-sm mb-4" style="border-radius: 15px; background: #eef1f5;">
+                        <div class="card-body d-flex align-items-center">
+                            <div class="me-3 fs-3 text-secondary"><i class="fas fa-lock"></i></div>
+                            <div class="flex-grow-1">
+                                <small class="d-block fw-bold text-dark">Medical ID</small>
+                                <small class="text-muted" style="font-size: 11px;">Unlocks when all your requirements are approved.</small>
+                            </div>
+                            <i class="fas fa-chevron-right text-secondary small"></i>
+                        </div>
+                    </div>
+                <?php endif; ?>
+            </a>
+        <?php endif; ?>
+
         <h6 class="fw-bold mb-3 small text-muted">Requirement checklist</h6>
 
         <?php if ($total > 0): ?>
