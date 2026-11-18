@@ -64,74 +64,76 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['login'])) {
 }
 ?>
 <!DOCTYPE html>
-<link rel="stylesheet" href="css/campus-bg.css">
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Sign In | NeuMed</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta name="theme-color" content="#137a3a">
+    <title>Sign In | NEUMed</title>
+    <script src="js/theme.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
-    <style>
-        :root { --primary-blue: #2563eb; --bg-gray: #f9fafb; }
-        body { background: var(--bg-gray); min-height: 100vh; display: flex; flex-direction: column; justify-content: center; font-family: 'Segoe UI', Roboto, sans-serif; }
-        .login-container { width: 100%; max-width: 400px; margin: auto; padding: 20px; }
-        .app-card { background: #fff; padding: 30px 25px; border-radius: 30px; box-shadow: 0 10px 25px rgba(0,0,0,0.03); }
-        .logo-box img { width: 65px; margin-bottom: 10px; }
-        .app-title { font-size: 1.6rem; font-weight: 800; color: #111; margin-bottom: 2px; }
-        .app-subtitle { font-size: 0.75rem; color: #6b7280; margin-bottom: 25px; }
-        .input-group-custom { margin-bottom: 12px; text-align: left; position: relative; }
-        .input-group-custom label { font-size: 0.75rem; font-weight: 700; color: #374151; margin-left: 5px; margin-bottom: 4px; display: block; }
-        .form-control { border-radius: 12px; padding: 10px 15px; background: #f3f4f6; border: 1.5px solid transparent; font-size: 0.9rem; height: 48px; }
-        .form-control:focus { background: #fff; border-color: var(--primary-blue); box-shadow: none; }
-        .toggle-pw { position: absolute; right: 14px; top: 31px; background: none; border: 0; color: #6b7280; padding: 4px; }
-        .btn-login { background: var(--primary-blue); border: none; border-radius: 12px; padding: 12px; font-weight: 700; font-size: 0.95rem; box-shadow: 0 4px 12px rgba(37, 99, 235, 0.2); }
-        .helper-links { font-size: 0.8rem; margin-top: 20px; color: #6b7280; }
-        .helper-links a, .forgot-link { color: var(--primary-blue); text-decoration: none; font-weight: 600; }
-        .forgot-link { font-size: 0.75rem; display: block; text-align: right; margin-top: 6px; }
-    </style>
+    <link rel="stylesheet" href="css/app.css">
 </head>
-<body>
+<body class="auth">
 
-<div class="login-container">
-    <div class="app-card text-center">
-        <div class="logo-box">
-            <img src="img/logo.png" alt="New Era University seal">
+<header class="auth-hero">
+    <img class="auth-logo" src="img/logo.png" alt="New Era University seal">
+    <div class="auth-brand">NEU<span>Med</span></div>
+    <p class="auth-tag">Your medical clearance, sorted.</p>
+</header>
+
+<main class="auth-sheet">
+    <h1>Welcome back</h1>
+    <p class="muted small mb-4">Sign in to track your requirements.</p>
+
+    <?php if ($error): ?>
+        <div class="n-notice bad" role="alert"><i class="fas fa-circle-exclamation mt-1"></i><span><?= h($error) ?></span></div>
+    <?php endif; ?>
+
+    <form action="index.php" method="POST" autocomplete="on">
+        <?= csrf_field() ?>
+
+        <div class="mb-3">
+            <label class="n-label" for="email">Institutional email</label>
+            <div class="n-input has-icon">
+                <i class="fas fa-envelope lead"></i>
+                <input type="email" id="email" name="email" class="form-control n-control"
+                       placeholder="name@neu.edu.ph" autocomplete="username" autocapitalize="none" inputmode="email"
+                       value="<?= h($_POST['email'] ?? '') ?>" required>
+            </div>
         </div>
-        <div class="app-title">NeuMed</div>
-        <p class="app-subtitle">NEU Student Medical Record System</p>
 
-        <?php if ($error): ?>
-            <div class="alert alert-danger py-2 small border-0 mb-3" style="border-radius:10px;" role="alert">
-                <?= h($error) ?>
+        <div class="mb-2">
+            <label class="n-label" for="password">Password</label>
+            <div class="n-input has-icon">
+                <i class="fas fa-lock lead"></i>
+                <input type="password" id="password" name="password" class="form-control n-control"
+                       placeholder="Enter your password" autocomplete="current-password" required>
+                <button type="button" class="n-toggle" id="togglePw" aria-label="Show password"><i class="fas fa-eye"></i></button>
             </div>
-        <?php endif; ?>
-
-        <form action="index.php" method="POST" autocomplete="on">
-            <?= csrf_field() ?>
-
-            <div class="input-group-custom">
-                <label for="email">Institutional Email</label>
-                <input type="email" id="email" name="email" class="form-control"
-                       placeholder="name@neu.edu.ph" value="<?= h($_POST['email'] ?? '') ?>" required>
-            </div>
-
-            <div class="input-group-custom">
-                <label for="password">Password</label>
-                <input type="password" id="password" name="password" class="form-control" placeholder="Enter your password" required>
-                <button type="button" class="toggle-pw" id="togglePw" aria-label="Show password"><i class="fas fa-eye"></i></button>
-                <a href="forgot_password.php" class="forgot-link">Forgot password?</a>
-            </div>
-
-            <button type="submit" name="login" class="btn btn-primary w-100 btn-login text-white mt-3">Sign In</button>
-        </form>
-
-        <div class="helper-links">
-            <p class="mb-1"><i class="fas fa-user-shield me-1 opacity-50"></i> <a href="staff_login.php">Health Office Portal</a></p>
-            <p class="mb-0">New student? <a href="register.php">Create Account</a></p>
         </div>
+
+        <div class="text-end mb-4">
+            <a href="forgot_password.php" class="n-link small">Forgot password?</a>
+        </div>
+
+        <button type="submit" name="login" class="n-btn n-btn-primary n-btn-block">Sign in</button>
+    </form>
+
+    <div class="d-flex align-items-center gap-3 my-4 muted small">
+        <hr class="flex-fill m-0"><span>New to NEUMed?</span><hr class="flex-fill m-0">
     </div>
-</div>
+
+    <a href="register.php" class="n-btn n-btn-ghost n-btn-block"><i class="fas fa-user-plus"></i> Create an account</a>
+
+    <p class="text-center mt-4 mb-0 small">
+        <a href="staff_login.php" class="n-link muted"><i class="fas fa-shield-halved me-1"></i> Health Office Portal</a>
+    </p>
+</main>
 
 <script>
 document.getElementById('togglePw').addEventListener('click', function () {

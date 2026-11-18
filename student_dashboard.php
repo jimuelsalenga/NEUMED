@@ -25,195 +25,182 @@ while ($row = $res->fetch_assoc()) {
     $requirements[] = $row;
 }
 
-// Progress numbers
+// Progress numbers + the next thing the student should do
 $total = count($requirements);
 $approved = $pending = $resubmit = 0;
+$next = null;
 foreach ($requirements as $req) {
     $st = $subs[$req['req_name']]['status'] ?? null;
     if ($st === 'Approved')      $approved++;
     elseif (is_resubmit($st))    $resubmit++;
     elseif ($st)                 $pending++;
+
+    if ($next === null && (!$st || is_resubmit($st))) {
+        $next = ['name' => $req['req_name'], 'resubmit' => is_resubmit($st)];
+    }
 }
 $progress = $total ? (int)round($approved / $total * 100) : 0;
 $cleared  = $total > 0 && $approved === $total;
+$ring_off = round(264 * (1 - $progress / 100), 1);
 
 if ($cleared) {
-    $banner = ['success', 'fa-circle-check', 'Medically cleared', 'All requirements have been approved.'];
+    $hero_title = "You're medically cleared";
+    $hero_sub   = 'All requirements are approved. Show your Medical ID when you need it.';
 } elseif ($resubmit > 0) {
-    $banner = ['danger', 'fa-circle-exclamation', 'Action needed',
-               ($resubmit === 1 ? '1 document needs' : "$resubmit documents need") . ' to be resubmitted.'];
+    $hero_title = 'Action needed';
+    $hero_sub   = ($resubmit === 1 ? '1 document needs' : "$resubmit documents need") . ' to be resubmitted.';
+} elseif ($total > 0 && $pending === $total - $approved && $pending > 0) {
+    $hero_title = 'Sit tight';
+    $hero_sub   = 'The clinic is reviewing your documents.';
 } else {
-    $note = "$approved of $total requirements approved";
-    if ($pending > 0) $note .= ", $pending waiting for review";
-    $banner = ['primary', 'fa-clipboard-check', 'Clearance in progress', $note . '.'];
+    $hero_title = 'Almost there';
+    $hero_sub   = "$approved of $total requirements approved" . ($pending > 0 ? ", $pending in review." : '.');
 }
 
 // Unread notifications
-$unread = 0;
 $stmt = $conn->prepare("SELECT COUNT(*) AS c FROM notifications WHERE user_id = ? AND is_read = 0");
 $stmt->bind_param('i', $student_id);
 $stmt->execute();
 $unread = (int)$stmt->get_result()->fetch_assoc()['c'];
 $stmt->close();
+
+// Status color (from status.php) -> pill/bubble style
+$style_of = ['success' => 'ok', 'warning' => 'wait', 'danger' => 'bad', 'secondary' => 'idle'];
+$icon_of  = ['ok' => 'fa-check', 'wait' => 'fa-hourglass-half', 'bad' => 'fa-rotate-right', 'idle' => 'fa-file-arrow-up'];
 ?>
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta name="theme-color" content="#137a3a">
     <title>Home | NEUMed</title>
+    <script src="js/theme.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
-    <style>
-        body { background: #f7f9fc; padding-bottom: 90px; }
-        .app-bar { background: #fff; padding: 15px; border-bottom: 1px solid #eee; }
-        .welcome-section { background: linear-gradient(135deg, #007bff, #0056b3); color: #fff; padding: 25px 20px; border-radius: 0 0 25px 25px; }
-        .stat-card { border: none; border-radius: 15px; transition: 0.3s; margin-bottom: 12px; }
-        .stat-card:active { transform: scale(0.98); }
-        .offline-indicator { font-size: 11px; font-weight: bold; }
-        .bell { position: relative; color: #374151; font-size: 1.15rem; text-decoration: none; }
-        .bell .count { position: absolute; top: -6px; right: -9px; font-size: 10px; }
-    </style>
+    <link rel="stylesheet" href="css/app.css">
 </head>
-<body>
+<body class="app">
 
-    <div id="sync-status" class="bg-dark text-white text-center py-1 offline-indicator d-none" role="status">
-        <i class="fas fa-triangle-exclamation"></i> You're offline. Uploads won't work until you reconnect.
+    <div id="sync-status" class="d-none text-center py-2 small fw-bold" style="background: var(--text); color: var(--surface);" role="status">
+        <i class="fas fa-triangle-exclamation me-1"></i> You're offline. Uploads won't work until you reconnect.
     </div>
 
-    <div class="app-bar d-flex justify-content-between align-items-center shadow-sm sticky-top">
-        <span class="fw-bold text-primary"><i class="fas fa-notes-medical me-2"></i>NEUMed</span>
-        <a href="notifications.php" class="bell" aria-label="Notifications">
-            <i class="fas fa-bell"></i>
-            <?php if ($unread > 0): ?>
-                <span class="badge rounded-pill bg-danger count"><?= $unread > 9 ? '9+' : $unread ?></span>
-            <?php endif; ?>
-        </a>
-    </div>
-
-    <div class="welcome-section mb-4 shadow">
-        <h4 class="m-0 fw-bold">Hi, <?= h($first_name) ?>!</h4>
-        <p class="small opacity-75 mb-0">University Medical Clearance Tracker</p>
-    </div>
-
-    <div class="container">
-
-        <?php if (isset($_GET['success'])): ?>
-            <div class="alert alert-success border-0 shadow-sm small py-2" style="border-radius:12px;" role="status">
-                <i class="fas fa-check-circle me-1"></i> Document submitted. It's now waiting for review.
-            </div>
-        <?php endif; ?>
-
-        <?php if ($total > 0): ?>
-        <div class="card border-0 shadow-sm mb-4" style="border-radius: 15px;">
-            <div class="card-body">
-                <div class="d-flex align-items-center mb-3">
-                    <i class="fas <?= $banner[1] ?> text-<?= $banner[0] ?> fs-3 me-3"></i>
-                    <div>
-                        <div class="fw-bold"><?= h($banner[2]) ?></div>
-                        <small class="text-muted"><?= h($banner[3]) ?></small>
-                    </div>
-                </div>
-                <div class="progress" style="height: 8px;" role="progressbar"
-                     aria-valuenow="<?= $progress ?>" aria-valuemin="0" aria-valuemax="100">
-                    <div class="progress-bar bg-<?= $banner[0] ?>" style="width: <?= $progress ?>%"></div>
-                </div>
-            </div>
+    <header class="n-appbar">
+        <div class="brand">
+            <img src="img/logo.png" alt="">
+            <span class="wordmark">NEU<em>Med</em></span>
         </div>
-        <?php endif; ?>
+        <a href="notifications.php" class="n-iconbtn" aria-label="Notifications">
+            <i class="fas fa-bell"></i>
+            <?php if ($unread > 0): ?><span class="count"><?= $unread > 9 ? '9+' : $unread ?></span><?php endif; ?>
+        </a>
+    </header>
+
+    <main class="n-page">
+
+        <section class="pt-4 pb-3 rise">
+            <p class="muted small fw-bold mb-1">Welcome back</p>
+            <h1 class="fw-bold m-0" style="font-size: 1.9rem;">Hi, <?= h($first_name) ?> 👋</h1>
+        </section>
 
         <?php if ($total > 0): ?>
-            <a href="medical_id.php" class="text-decoration-none">
-                <?php if ($cleared): ?>
-                    <div class="card border-0 shadow-sm mb-4" style="border-radius: 15px; background: #e7f7ee;">
-                        <div class="card-body d-flex align-items-center">
-                            <div class="me-3 fs-3 text-success"><i class="fas fa-qrcode"></i></div>
-                            <div class="flex-grow-1">
-                                <small class="d-block fw-bold text-dark">Medical ID</small>
-                                <small class="text-muted" style="font-size: 11px;">You're cleared. Tap to show your ID to your professor.</small>
-                            </div>
-                            <i class="fas fa-chevron-right text-success small"></i>
-                        </div>
+        <!-- Progress hero -->
+        <section class="n-hero-card <?= ($resubmit > 0 && !$cleared) ? 'bad' : '' ?> rise" style="--i:1">
+            <div class="d-flex align-items-center gap-3">
+                <div class="n-ring <?= $cleared ? 'done' : '' ?>" style="--off: <?= $ring_off ?>">
+                    <svg width="96" height="96" viewBox="0 0 96 96" aria-hidden="true">
+                        <circle class="track" cx="48" cy="48" r="42" fill="none" stroke-width="8"/>
+                        <circle class="bar" cx="48" cy="48" r="42" fill="none" stroke-width="8"/>
+                    </svg>
+                    <div class="num" aria-label="<?= $approved ?> of <?= $total ?> requirements approved">
+                        <span><?= $approved ?>/<?= $total ?></span><small>approved</small>
                     </div>
-                <?php else: ?>
-                    <div class="card border-0 shadow-sm mb-4" style="border-radius: 15px; background: #eef1f5;">
-                        <div class="card-body d-flex align-items-center">
-                            <div class="me-3 fs-3 text-secondary"><i class="fas fa-lock"></i></div>
-                            <div class="flex-grow-1">
-                                <small class="d-block fw-bold text-dark">Medical ID</small>
-                                <small class="text-muted" style="font-size: 11px;">Unlocks when all your requirements are approved.</small>
-                            </div>
-                            <i class="fas fa-chevron-right text-secondary small"></i>
-                        </div>
-                    </div>
-                <?php endif; ?>
-            </a>
+                </div>
+                <div>
+                    <div class="fw-bold" style="font-size: 1.15rem; line-height: 1.2;"><?= h($hero_title) ?></div>
+                    <div class="small mt-1" style="opacity: .88;"><?= h($hero_sub) ?></div>
+                </div>
+            </div>
+
+            <?php if ($cleared): ?>
+                <a href="medical_id.php" class="n-btn n-btn-light n-btn-block mt-4"><i class="fas fa-id-card"></i> Show my Medical ID</a>
+            <?php elseif ($next): ?>
+                <a href="upload.php?type=<?= urlencode($next['name']) ?>" class="n-btn n-btn-light n-btn-block mt-4">
+                    <i class="fas <?= $next['resubmit'] ? 'fa-rotate-right' : 'fa-cloud-arrow-up' ?>"></i>
+                    <?= $next['resubmit'] ? 'Resubmit' : 'Upload' ?> <?= h($next['name']) ?>
+                </a>
+            <?php endif; ?>
+        </section>
+
+        <?php if (!$cleared): ?>
+        <a href="medical_id.php" class="n-card d-flex align-items-center gap-3 p-3 mt-3 rise" style="--i:2">
+            <div class="n-bubble idle"><i class="fas fa-lock"></i></div>
+            <div class="flex-fill">
+                <div class="fw-bold small">Medical ID</div>
+                <div class="muted" style="font-size: .75rem;">Unlocks when all requirements are approved.</div>
+            </div>
+            <i class="fas fa-chevron-right muted small"></i>
+        </a>
+        <?php endif; ?>
         <?php endif; ?>
 
-        <h6 class="fw-bold mb-3 small text-muted">Requirement checklist</h6>
+        <h2 class="n-section-title">Your requirements</h2>
 
         <?php if ($total > 0): ?>
-            <?php foreach ($requirements as $req):
-                $name = $req['req_name'];
-                $sub  = $subs[$name] ?? null;
-                $st   = $sub['status'] ?? null;
+            <?php foreach ($requirements as $i => $req):
+                $name  = $req['req_name'];
+                $sub   = $subs[$name] ?? null;
+                $st    = $sub['status'] ?? null;
+                $style = $style_of[status_color($st)] ?? 'idle';
             ?>
-                <div class="card stat-card shadow-sm">
-                    <div class="card-body p-3">
-                        <div class="d-flex justify-content-between align-items-center">
-                            <div class="d-flex align-items-center">
-                                <div class="me-3">
-                                    <?php if ($st === 'Approved'): ?>
-                                        <i class="fas fa-check-circle text-success fs-4"></i>
-                                    <?php elseif (is_resubmit($st)): ?>
-                                        <i class="fas fa-circle-exclamation text-danger fs-4"></i>
-                                    <?php else: ?>
-                                        <i class="fas fa-file-alt text-light fs-4 border rounded p-1"></i>
-                                    <?php endif; ?>
-                                </div>
-                                <div>
-                                    <div class="fw-bold small"><?= h($name) ?></div>
-                                    <?= status_badge($st) ?>
-                                </div>
-                            </div>
-
-                            <?php if ($st === 'Approved'): ?>
-                                <a href="view_file.php?id=<?= (int)$sub['id'] ?>" target="_blank"
-                                   class="btn btn-light btn-sm rounded-pill px-3 shadow-sm">View</a>
-                            <?php else: ?>
-                                <a href="upload.php?type=<?= urlencode($name) ?>"
-                                   class="btn btn-light btn-sm rounded-circle shadow-sm"
-                                   aria-label="<?= is_resubmit($st) ? 'Resubmit' : 'Upload' ?> <?= h($name) ?>">
-                                    <i class="fas fa-chevron-right text-primary" style="font-size: 12px;"></i>
-                                </a>
-                            <?php endif; ?>
+                <div class="n-card mb-3 rise" style="--i: <?= $i + 3 ?>">
+                    <div class="n-item">
+                        <div class="n-bubble <?= $style ?>"><i class="fas <?= $icon_of[$style] ?>"></i></div>
+                        <div class="flex-fill">
+                            <div class="title"><?= h($name) ?></div>
+                            <?php if (!empty($req['description'])): ?><div class="sub"><?= h($req['description']) ?></div><?php endif; ?>
+                            <span class="n-pill <?= $style ?>"><?= h(status_label($st)) ?></span>
                         </div>
 
-                        <?php if (is_resubmit($st) && !empty($sub['remarks'])): ?>
-                            <div class="mt-2 p-2 bg-light rounded small text-danger">
-                                <strong>Reviewer's note:</strong> <?= h($sub['remarks']) ?>
-                            </div>
+                        <?php if ($st === 'Approved'): ?>
+                            <a href="view_file.php?id=<?= (int)$sub['id'] ?>" target="_blank" class="n-btn n-btn-ghost n-btn-sm">View</a>
+                        <?php else: ?>
+                            <a href="upload.php?type=<?= urlencode($name) ?>"
+                               class="n-btn <?= is_resubmit($st) ? 'n-btn-danger' : 'n-btn-primary' ?> n-btn-sm"
+                               aria-label="<?= is_resubmit($st) ? 'Resubmit' : 'Upload' ?> <?= h($name) ?>">
+                                <?= is_resubmit($st) ? 'Fix' : ($st ? 'Replace' : 'Upload') ?>
+                            </a>
                         <?php endif; ?>
                     </div>
+
+                    <?php if (is_resubmit($st) && !empty($sub['remarks'])): ?>
+                        <div class="n-note"><strong>Reviewer's note:</strong> <?= h($sub['remarks']) ?></div>
+                    <?php endif; ?>
                 </div>
             <?php endforeach; ?>
         <?php else: ?>
-            <div class="text-center py-5">
-                <p class="text-muted small">No requirements have been set up yet.</p>
-            </div>
+            <div class="n-card text-center p-4 muted small">No requirements have been set up yet.</div>
         <?php endif; ?>
-    </div>
+
+    </main>
+
+    <?php if (isset($_GET['success'])): ?>
+        <span data-toast="Submitted! The clinic will review it soon." data-toast-icon="fa-circle-check" hidden></span>
+    <?php endif; ?>
 
     <?php include('includes/navbar.php'); ?>
 
+    <script src="js/app.js"></script>
     <script>
-        window.addEventListener('offline', function () {
-            document.getElementById('sync-status').classList.remove('d-none');
-        });
-        window.addEventListener('online', function () {
-            document.getElementById('sync-status').classList.add('d-none');
-        });
-        if (!navigator.onLine) document.getElementById('sync-status').classList.remove('d-none');
+        var bar = document.getElementById('sync-status');
+        function sync() { bar.classList.toggle('d-none', navigator.onLine); }
+        window.addEventListener('offline', sync);
+        window.addEventListener('online', sync);
+        sync();
     </script>
 </body>
 </html>
