@@ -35,6 +35,7 @@ if (isset($_POST['staff_login'])) {
 ?>
 
 <!DOCTYPE html>
+<link rel="stylesheet" href="css/campus-bg.css">
 <html lang="en">
 <head>
     <meta charset="UTF-8">

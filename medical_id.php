@@ -38,7 +38,7 @@ if (!$cleared) {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Medical ID | MediTrack</title>
+    <title>Medical ID | NEUMed</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
@@ -69,7 +69,7 @@ if (!$cleared) {
             <div class="id-top">
                 <img src="img/logo.png" alt="New Era University seal">
                 <div>
-                    <div class="fw-bold">MediTrack</div>
+                    <div class="fw-bold">NEUMed</div>
                     <small style="opacity:.85;">NEU Medical Clearance ID</small>
                 </div>
             </div>
@@ -89,7 +89,7 @@ if (!$cleared) {
 
             <div class="id-foot">
                 <span id="clock"></span><br>
-                Status is checked live from the MediTrack server each time this page opens.
+                Status is checked live from the NEUMed server each time this page opens.
             </div>
         </div>
         <p class="text-center text-muted small mt-3">Tip: raise your screen brightness before showing this.</p>

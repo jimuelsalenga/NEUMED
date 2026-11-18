@@ -64,6 +64,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['login'])) {
 }
 ?>
 <!DOCTYPE html>
+<link rel="stylesheet" href="css/campus-bg.css">
 <html lang="en">
 <head>
     <meta charset="UTF-8">

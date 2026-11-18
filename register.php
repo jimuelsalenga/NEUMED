@@ -79,6 +79,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['register'])) {
 }
 ?>
 <!DOCTYPE html>
+<link rel="stylesheet" href="css/campus-bg.css">
 <html lang="en">
 <head>
     <meta charset="UTF-8">

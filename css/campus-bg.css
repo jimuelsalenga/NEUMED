@@ -1,0 +1,29 @@
+/* Campus photo background for the login, register and staff login pages.
+   The photo is a fixed layer (not "background-attachment: fixed", which is unreliable on phones). */
+
+body::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    z-index: -2;
+    background: url('../img/campus.jpg') center 30% / cover no-repeat;
+}
+
+/* Soft blue tint so the white card and its text stay easy to read */
+body::after {
+    content: "";
+    position: fixed;
+    inset: 0;
+    z-index: -1;
+    background: linear-gradient(180deg, rgba(15, 40, 90, 0.30), rgba(15, 40, 90, 0.65));
+}
+
+/* Slightly see-through card on top of the photo */
+.app-card,
+.register-card,
+.staff-card {
+    background: rgba(255, 255, 255, 0.95) !important;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.25) !important;
+    -webkit-backdrop-filter: blur(6px);
+    backdrop-filter: blur(6px);
+}
