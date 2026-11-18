@@ -36,6 +36,11 @@ $stmt->close();
 $existing = ($type !== '') ? ($subs[$type] ?? null) : null;
 $locked = $existing && $existing['status'] === 'Approved';
 
+// A file above the server's limit makes PHP drop the whole form, so nothing seems to happen
+if ($type !== '' && $_SERVER['REQUEST_METHOD'] === 'POST' && empty($_POST) && empty($_FILES) && (int)($_SERVER['CONTENT_LENGTH'] ?? 0) > 0) {
+    $message = "That file is too large for the server. Please choose a smaller one (max 5MB).";
+}
+
 if ($type !== '' && !$locked && $_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['upload'])) {
     $f = $_FILES['fileToUpload'] ?? null;
 
@@ -170,6 +175,7 @@ if ($type !== '' && !$locked && $_SERVER['REQUEST_METHOD'] === 'POST' && isset($
 
         <form action="upload.php?type=<?= urlencode($type) ?>" method="POST" enctype="multipart/form-data" id="uploadForm">
             <?= csrf_field() ?>
+            <input type="hidden" name="upload" value="1">
 
             <div class="upload-area shadow-sm mb-3" id="dropZone" role="button" tabindex="0">
                 <div class="bg-light d-inline-block p-4 rounded-circle mb-3">
@@ -192,7 +198,7 @@ if ($type !== '' && !$locked && $_SERVER['REQUEST_METHOD'] === 'POST' && isset($
                 </div>
             </div>
 
-            <button type="submit" name="upload" id="submitBtn" class="btn btn-primary w-100 btn-submit shadow" disabled>
+            <button type="submit" id="submitBtn" class="btn btn-primary w-100 btn-submit shadow" disabled>
                 <i class="fas fa-paper-plane me-2"></i>Submit for Review
             </button>
         </form>
@@ -254,9 +260,13 @@ if ($type !== '' && !$locked && $_SERVER['REQUEST_METHOD'] === 'POST' && isset($
             if (!input.files.length) { reset(); return; }
             var file = await compress(input.files[0]);
             if (file !== input.files[0]) {
-                var dt = new DataTransfer();
-                dt.items.add(file);
-                input.files = dt.files;
+                try {
+                    var dt = new DataTransfer();
+                    dt.items.add(file);
+                    input.files = dt.files;
+                } catch (e) {
+                    file = input.files[0]; // couldn't swap in the smaller photo, use the original
+                }
             }
             if (file.size > MAX) {
                 alert('That file is larger than 5MB. Please choose a smaller one.');
