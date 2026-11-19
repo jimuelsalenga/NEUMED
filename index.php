@@ -77,16 +77,68 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['login'])) {
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <link rel="stylesheet" href="css/app.css">
+    <style>
+        /* ---- Welcome screen + swipe-up sign-in sheet ---- */
+        html { scroll-snap-type: y proximity; }
+        body.intro-mode { display: block; min-height: 0; }
+
+        /* The welcome screen stays put while the sheet slides up over it */
+        .intro {
+            position: fixed; inset: 0; z-index: 0;
+            display: flex; align-items: center; justify-content: center; text-align: center; color: #fff;
+            padding: 24px 24px calc(72px + env(safe-area-inset-bottom));
+        }
+        .intro-inner {
+            transform: translateY(calc(var(--p, 0) * -9vh)) scale(calc(1 - var(--p, 0) * .18));
+            opacity: calc(1 - var(--p, 0) * .55);
+            will-change: transform, opacity;
+        }
+        .intro .auth-logo { width: 124px; height: 124px; padding: 6px; animation: introPop .8s cubic-bezier(.2, 1.3, .4, 1) both, float 4s ease-in-out .8s infinite; }
+        .intro .auth-brand { font-size: 3rem; margin-top: 20px; animation: introUp .7s .25s cubic-bezier(.2, .8, .2, 1) both; }
+        .intro .auth-tag { font-size: 1rem; animation: introUp .7s .4s cubic-bezier(.2, .8, .2, 1) both; }
+        @keyframes introPop { from { transform: scale(.4); opacity: 0; } }
+        @keyframes introUp  { from { transform: translateY(18px); opacity: 0; } }
+
+        /* Empty space the page scrolls through (leaves only the sheet's top handle visible at first) */
+        .spacer { height: calc(100vh - 72px); height: calc(100dvh - 72px - env(safe-area-inset-bottom)); scroll-snap-align: start; }
+
+        body.intro-mode .sheet {
+            position: relative; z-index: 2; margin: 0 auto; animation: none; scroll-snap-align: end;
+            border-radius: 32px 32px 0 0; padding: 0 22px calc(28px + env(safe-area-inset-bottom));
+        }
+        .peek { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; height: 72px; margin: 0 -22px 6px; text-decoration: none; color: var(--muted); font-size: .8rem; font-weight: 700; }
+        .peek .grab { width: 44px; height: 5px; border-radius: 99px; background: var(--border); }
+        .peek .hint { transition: opacity .25s; }
+        .peek .hint i { margin-right: 6px; animation: nudge 1.4s ease-in-out infinite; }
+        body.opened .peek .hint { opacity: 0; }
+        @keyframes nudge { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-4px); } }
+
+        @media (prefers-reduced-motion: reduce) {
+            html { scroll-snap-type: none; }
+            .intro-inner { transform: none !important; opacity: 1 !important; }
+        }
+    </style>
 </head>
-<body class="auth">
+<body class="auth intro-mode" data-open="<?= ($error !== '' || $_SERVER['REQUEST_METHOD'] === 'POST') ? '1' : '0' ?>">
 
-<header class="auth-hero">
-    <img class="auth-logo" src="img/logo.png" alt="New Era University seal">
-    <div class="auth-brand">NEU<span>Med</span></div>
-    <p class="auth-tag">Your medical clearance, sorted.</p>
-</header>
+<!-- Screen 1: welcome -->
+<section class="intro" id="intro" aria-label="Welcome to NEUMed">
+    <div class="intro-inner">
+        <img class="auth-logo" src="img/logo.png" alt="New Era University seal">
+        <div class="auth-brand">NEU<span>Med</span></div>
+        <p class="auth-tag">Your medical clearance, sorted.</p>
+    </div>
+</section>
 
-<main class="auth-sheet">
+<div class="spacer" id="spacer"></div>
+
+<!-- Screen 2: sign-in sheet (slides up over the welcome screen) -->
+<main class="auth-sheet sheet" id="signin">
+    <a href="#signin" class="peek" id="peek" aria-controls="signin">
+        <span class="grab"></span>
+        <span class="hint"><i class="fas fa-chevron-up"></i>Swipe up to sign in</span>
+    </a>
+
     <h1>Welcome back</h1>
     <p class="muted small mb-4">Sign in to track your requirements.</p>
 
@@ -136,13 +188,51 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['login'])) {
 </main>
 
 <script>
-document.getElementById('togglePw').addEventListener('click', function () {
-    var pw = document.getElementById('password');
-    var show = pw.type === 'password';
-    pw.type = show ? 'text' : 'password';
-    this.innerHTML = show ? '<i class="fas fa-eye-slash"></i>' : '<i class="fas fa-eye"></i>';
-    this.setAttribute('aria-label', show ? 'Hide password' : 'Show password');
-});
+(function () {
+    var intro = document.getElementById('intro'),
+        spacer = document.getElementById('spacer'),
+        peek = document.getElementById('peek'),
+        reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+    function toBottom(smooth) { window.scrollTo({ top: document.documentElement.scrollHeight, behavior: smooth && !reduce ? 'smooth' : 'auto' }); }
+    function toTop(smooth)    { window.scrollTo({ top: 0, behavior: smooth && !reduce ? 'smooth' : 'auto' }); }
+
+    // The welcome screen shrinks and fades as the sheet rises
+    var ticking = false;
+    function update() {
+        var p = Math.min(1, Math.max(0, window.scrollY / (spacer.offsetHeight || 1)));
+        intro.style.setProperty('--p', p.toFixed(3));
+        document.body.classList.toggle('opened', p > 0.5);
+        ticking = false;
+    }
+    window.addEventListener('scroll', function () {
+        if (!ticking) { ticking = true; requestAnimationFrame(update); }
+    }, { passive: true });
+
+    // Tap the handle: open the sheet, or close it again
+    peek.addEventListener('click', function (e) {
+        e.preventDefault();
+        if (document.body.classList.contains('opened')) toTop(true); else toBottom(true);
+    });
+
+    // Skip the welcome screen when it would just be in the way:
+    // after a failed sign-in, when the address ends in #signin, or when coming from another page of the app
+    var cameFromApp = document.referrer && document.referrer.indexOf(location.origin) === 0;
+    var openNow = document.body.getAttribute('data-open') === '1' || location.hash === '#signin' || cameFromApp;
+    window.addEventListener('load', function () {
+        if (openNow) { toBottom(false); }
+        update();
+    });
+
+    // Show / hide password
+    document.getElementById('togglePw').addEventListener('click', function () {
+        var pw = document.getElementById('password');
+        var show = pw.type === 'password';
+        pw.type = show ? 'text' : 'password';
+        this.innerHTML = show ? '<i class="fas fa-eye-slash"></i>' : '<i class="fas fa-eye"></i>';
+        this.setAttribute('aria-label', show ? 'Hide password' : 'Show password');
+    });
+})();
 </script>
 </body>
 </html>

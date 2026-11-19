@@ -1,151 +1,150 @@
 <?php
-session_start();
-include('includes/db_conn.php');
+require_once 'includes/security.php';
+require_once 'includes/db_conn.php';
+require_once 'includes/mailer.php';
 
-use PHPMailer\PHPMailer\PHPMailer;
-use PHPMailer\PHPMailer\Exception;
+if (isset($_SESSION['role'])) {
+    header("Location: " . home_for_role($_SESSION['role']));
+    exit();
+}
 
-require 'phpmailer/src/Exception.php';
-require 'phpmailer/src/PHPMailer.php';
-require 'phpmailer/src/SMTP.php';
+const RESET_LINK_MINUTES = 30;   // how long the emailed link works
+const RESET_MAX_PER_15_MIN = 3;  // stops someone spamming an inbox
 
-$msg = "";
-$step = 1; 
+$error = "";
+$sent = false;
 
-if (isset($_POST['verify'])) {
-    $email = mysqli_real_escape_string($conn, $_POST['email']);
-    $course = mysqli_real_escape_string($conn, $_POST['course']);
+function reset_email_html(string $name, string $url): string {
+    $name = htmlspecialchars($name, ENT_QUOTES, 'UTF-8');
+    $url  = htmlspecialchars($url, ENT_QUOTES, 'UTF-8');
+    $mins = RESET_LINK_MINUTES;
+    return "
+    <div style='font-family: Arial, sans-serif; max-width: 480px; margin: auto; padding: 28px; border: 1px solid #e1eae4; border-radius: 20px;'>
+        <h2 style='color: #137a3a; margin: 0 0 4px;'>NEU<span style='color:#d4a600;'>Med</span></h2>
+        <p style='color:#5b6b62; margin: 0 0 20px; font-size: 13px;'>Password reset</p>
+        <p>Hi <b>$name</b>,</p>
+        <p>We got a request to reset your NEUMed password. Tap the button to choose a new one. This link works once and expires in $mins minutes.</p>
+        <p style='text-align:center; margin: 26px 0;'>
+            <a href='$url' style='background:#137a3a; color:#ffffff; text-decoration:none; padding:14px 28px; border-radius:14px; font-weight:bold; display:inline-block;'>Reset my password</a>
+        </p>
+        <p style='font-size:12px; color:#5b6b62;'>If the button doesn't work, copy this link into your browser:<br><span style='word-break:break-all;'>$url</span></p>
+        <hr style='border:0; border-top:1px solid #eee; margin: 20px 0;'>
+        <p style='font-size:12px; color:#5b6b62;'>Didn't ask for this? You can ignore this email. Your password stays the same.</p>
+    </div>";
+}
 
-    $check = $conn->query("SELECT id, fullname FROM users WHERE email = '$email' AND course = '$course'");
-    
-    if ($check->num_rows > 0) {
-        $user_data = $check->fetch_assoc();
-        $user_id = $user_data['id'];
-        $user_name = $user_data['fullname'];
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['send_reset'])) {
+    $email = trim($_POST['email'] ?? '');
 
-        $temp_pass = substr(md5(time()), 0, 8);
+    if (!csrf_valid()) {
+        $error = "Your session expired. Please try again.";
+    } elseif (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+        $error = "Enter a valid email address.";
+    } else {
+        $stmt = $conn->prepare("SELECT id, fullname FROM users WHERE email = ? LIMIT 1");
+        $stmt->bind_param('s', $email);
+        $stmt->execute();
+        $user = $stmt->get_result()->fetch_assoc();
+        $stmt->close();
 
-        if ($conn->query("UPDATE users SET password = '$temp_pass' WHERE id = '$user_id'")) {
+        if ($user) {
+            // Limit how many links one account can request
+            $stmt = $conn->prepare(
+                "SELECT COUNT(*) AS c FROM password_resets WHERE user_id = ? AND created_at > (NOW() - INTERVAL 15 MINUTE)"
+            );
+            $stmt->bind_param('i', $user['id']);
+            $stmt->execute();
+            $recent = (int)$stmt->get_result()->fetch_assoc()['c'];
+            $stmt->close();
 
-            if (sendResetEmail($email, $user_name, $temp_pass)) {
-                $msg = "<div class='alert alert-success py-3 small border-0 shadow-sm' style='border-radius:15px;'>
-                        <i class='fas fa-paper-plane me-2'></i> Temporary password has been sent to your email! 
-                        Please check your inbox (and spam folder).
-                        </div>";
-                $step = 1;
-            } else {
-                $msg = "<div class='alert alert-danger py-2 small border-0' style='border-radius:10px;'>Verification success, but email failed to send.</div>";
+            if ($recent < RESET_MAX_PER_15_MIN) {
+                $token = bin2hex(random_bytes(32));          // the secret in the emailed link
+                $hash  = hash('sha256', $token);              // only the hash is saved
+
+                $stmt = $conn->prepare(
+                    "INSERT INTO password_resets (user_id, token_hash, expires_at)
+                     VALUES (?, ?, DATE_ADD(NOW(), INTERVAL " . RESET_LINK_MINUTES . " MINUTE))"
+                );
+                $stmt->bind_param('is', $user['id'], $hash);
+                $saved = $stmt->execute();
+                $stmt->close();
+
+                if ($saved) {
+                    $url = app_url('reset_password.php?token=' . $token);
+                    if (!send_mail($email, $user['fullname'], 'Reset your NEUMed password', reset_email_html($user['fullname'], $url))) {
+                        error_log("Reset email could not be sent to user #" . $user['id']);
+                    }
+                }
             }
         }
-    } else {
-        $msg = "<div class='alert alert-danger py-2 small border-0' style='border-radius:10px;'>Identity not found. Please check your email and program.</div>";
+
+        // Always the same answer, so nobody can use this page to find out which emails are registered
+        $sent = true;
     }
 }
-
-function sendResetEmail($recipientEmail, $name, $newPass) {
-    $mail = new PHPMailer(true);
-    try {
-        $mail->isSMTP();
-        $mail->Host       = 'smtp.gmail.com';
-        $mail->SMTPAuth   = true;
-        $mail->Username   = 'jrqconnect@gmail.com'; 
-        $mail->Password   = 'rgbieypenmyzscpg';
-        $mail->SMTPSecure = PHPMailer::ENCRYPTION_SMTPS;
-        $mail->Port       = 465;
-
-        $mail->setFrom('jrqconnect@gmail.com', 'NEUMED NEU Support');
-        $mail->addAddress($recipientEmail);
-        $mail->isHTML(true);
-        $mail->Subject = "NEUMED Password Recovery";
-        
-        $mail->Body = "
-            <div style='font-family: sans-serif; padding: 25px; border: 1px solid #e1e8ed; border-radius: 20px; max-width: 500px; margin: auto;'>
-                <h2 style='color: #2563eb; text-align: center;'>NEUMED Recovery</h2>
-                <p>Hi <b>$name</b>,</p>
-                <p>We received a request to reset your medical portal password. Here is your temporary access code:</p>
-                <div style='background: #f3f4f6; padding: 20px; text-align: center; border-radius: 12px; font-size: 24px; font-weight: bold; letter-spacing: 2px; color: #1f2937;'>
-                    $newPass
-                </div>
-                <p style='color: #ef4444; font-size: 12px; margin-top: 15px;'>Note: Please change this password immediately after logging in for your security.</p>
-                <hr style='border: 0; border-top: 1px solid #eee; margin: 20px 0;'>
-                <p style='font-size: 11px; color: #9ca3af; text-align: center;'>This is an automated message. Please do not reply.</p>
-            </div>";
-
-        return $mail->send();
-    } catch (Exception $e) {
-        return false;
-    }
-}
-
-$courses = [
-    "BS in Astronomy", "AB in Broadcasting", "AB in Communication", "AB in Economics", 
-    "AB in Journalism", "AB in Political Science", "Bachelor of Elementary Education", 
-    "Bachelor of Library and Information Science", "Bachelor of Music", 
-    "Bachelor of Music Major in Music Education", "Bachelor of Public Administration", 
-    "Bachelor of Secondary Education", "BS in Accountancy", "BS in Accounting Information System", 
-    "BS in Accounting Technology", "BS in Architecture", "BS in Biology", 
-    "BS in Business Administration", "BS in Civil Engineering", "BS in Computer Science", 
-    "BS in Criminology", "BS in Electrical Engineering", "BS in Electronics Engineering", 
-    "BS in Entertainment and Multimedia Computing", "BS in Entrepreneurship", 
-    "BS in Foreign Service", "BS in Industrial Engineering", "BS in Information Systems", 
-    "BS in Information Technology", "BS in Mechanical Engineering", "BS in Medical Technology", 
-    "BS in Nursing", "BS in Physical Therapy", "BS in Psychology", 
-    "BS in Real Estate Management", "BS in Respiratory Therapy"
-];
 ?>
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Forgot Password | NEUMED</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta name="theme-color" content="#137a3a">
+    <title>Forgot Password | NEUMed</title>
+    <script src="js/theme.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
-    <style>
-        :root { --primary-blue: #2563eb; }
-        body { background: #f9fafb; min-height: 100vh; display: flex; align-items: center; justify-content: center; font-family: 'Segoe UI', sans-serif; }
-        .reset-card { width: 90%; max-width: 400px; padding: 35px 30px; border-radius: 30px; background: #fff; box-shadow: 0 10px 30px rgba(0,0,0,0.04); }
-        .form-control, .form-select { border-radius: 12px; padding: 12px; background: #f3f4f6; border: 1.5px solid transparent; font-size: 0.9rem; }
-        .form-control:focus { background: #fff; border-color: var(--primary-blue); box-shadow: none; }
-        .btn-verify { background: var(--primary-blue); border: none; border-radius: 12px; padding: 14px; font-weight: 700; }
-    </style>
+    <link rel="stylesheet" href="css/app.css">
 </head>
-<body>
+<body class="auth">
 
-<div class="reset-card text-center">
-    <div class="mb-3">
-        <i class="fas fa-lock-open fa-3x text-primary opacity-25"></i>
+<header class="auth-hero sm">
+    <img class="auth-logo" src="img/logo.png" alt="New Era University seal">
+    <div class="auth-brand" style="font-size:1.7rem;">NEU<span>Med</span></div>
+</header>
+
+<main class="auth-sheet">
+
+<?php if ($sent): ?>
+
+    <div class="n-success">
+        <div class="big"><i class="fas fa-envelope-circle-check"></i></div>
+        <h1>Check your email</h1>
+        <p class="muted mb-2">If that address is registered, we've sent a link to reset your password.</p>
+        <p class="muted small mb-4">It works for <?= RESET_LINK_MINUTES ?> minutes. Check your spam folder if you don't see it.</p>
+        <a href="index.php" class="n-btn n-btn-primary n-btn-block">Back to sign in</a>
     </div>
-    <h4 class="fw-bold mb-1">Account Recovery</h4>
-    <p class="text-muted small mb-4">We will send a temporary password to your email.</p>
 
-    <?php echo $msg; ?>
+<?php else: ?>
 
-    <form action="" method="POST">
-        <div class="mb-3 text-start">
-            <label class="small fw-bold text-muted ms-2">Select Your Program</label>
-            <select name="course" class="form-select" required>
-                <?php foreach($courses as $c): ?>
-                    <option value="<?php echo $c; ?>"><?php echo $c; ?></option>
-                <?php endforeach; ?>
-            </select>
+    <a href="index.php" class="n-back"><i class="fas fa-arrow-left me-1"></i> Sign in</a>
+
+    <h1 class="mt-3">Forgot your password?</h1>
+    <p class="muted small mb-4">No stress. Enter your email and we'll send you a link to set a new one.</p>
+
+    <?php if ($error): ?>
+        <div class="n-notice bad" role="alert"><i class="fas fa-circle-exclamation mt-1"></i><span><?= h($error) ?></span></div>
+    <?php endif; ?>
+
+    <form action="forgot_password.php" method="POST">
+        <?= csrf_field() ?>
+        <div class="mb-4">
+            <label class="n-label" for="email">Institutional email</label>
+            <div class="n-input has-icon">
+                <i class="fas fa-envelope lead"></i>
+                <input type="email" id="email" name="email" class="form-control n-control" placeholder="name@neu.edu.ph"
+                       autocapitalize="none" inputmode="email" value="<?= h($_POST['email'] ?? '') ?>" required>
+            </div>
         </div>
-        <div class="mb-4 text-start">
-            <label class="small fw-bold text-muted ms-2">Institutional Email</label>
-            <input type="email" name="email" class="form-control" placeholder="name@neu.edu.ph" required>
-        </div>
-        <button type="submit" name="verify" class="btn btn-primary w-100 btn-verify shadow-sm">
-            Verify & Send Email
+        <button type="submit" name="send_reset" class="n-btn n-btn-primary n-btn-block">
+            <i class="fas fa-paper-plane"></i> Send reset link
         </button>
     </form>
 
-    <div class="mt-4">
-        <a href="index.php" class="text-decoration-none small text-muted fw-bold">
-            <i class="fas fa-arrow-left me-1"></i> Back to Sign In
-        </a>
-    </div>
-</div>
+<?php endif; ?>
 
+</main>
 </body>
 </html>
