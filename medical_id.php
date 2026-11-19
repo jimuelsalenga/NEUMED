@@ -32,67 +32,76 @@ if (!$cleared) {
     $checklist = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
     $stmt->close();
 }
+
+// Status color (from status.php) -> pill/bubble style
+$style_of = ['success' => 'ok', 'warning' => 'wait', 'danger' => 'bad', 'secondary' => 'idle'];
+$initial  = mb_strtoupper(mb_substr(trim($info['fullname']), 0, 1));
 ?>
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta name="theme-color" content="#137a3a">
     <title>Medical ID | NEUMed</title>
+    <script src="js/theme.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
-    <style>
-        body { background: #f7f9fc; padding-bottom: 40px; font-family: 'Segoe UI', sans-serif; }
-        .id-card { background: #fff; border-radius: 28px; overflow: hidden; box-shadow: 0 12px 30px rgba(0,0,0,0.10); max-width: 380px; margin: 0 auto; }
-        .id-top { background: linear-gradient(135deg, #007bff, #0056b3); color: #fff; padding: 18px 20px; display: flex; align-items: center; }
-        .id-top img { width: 42px; height: 42px; background: #fff; border-radius: 50%; padding: 2px; margin-right: 12px; }
-        .id-status { background: #198754; color: #fff; text-align: center; padding: 12px; font-weight: 800; letter-spacing: 1px; }
-        .id-body { padding: 22px 20px; text-align: center; }
-        .id-name { font-size: 1.35rem; font-weight: 800; margin-bottom: 2px; }
-        .qr-box { display: inline-block; background: #fff; padding: 12px; border: 1px solid #e5e7eb; border-radius: 16px; margin-top: 16px; }
-        .id-foot { background: #f3f4f6; padding: 10px 16px; font-size: 11px; color: #6b7280; text-align: center; }
-        .locked-icon { width: 72px; height: 72px; border-radius: 50%; background: #eef1f5; display: inline-flex; align-items: center; justify-content: center; font-size: 1.8rem; color: #6b7280; }
-    </style>
+    <link rel="stylesheet" href="css/app.css">
 </head>
-<body>
+<body class="app no-dock">
 
-    <div class="p-3 border-bottom bg-white d-flex align-items-center mb-4">
-        <a href="student_dashboard.php" class="text-dark me-3 text-decoration-none" aria-label="Back"><i class="fas fa-chevron-left"></i></a>
-        <h6 class="m-0 fw-bold">Medical ID</h6>
-    </div>
+    <header class="n-sticky">
+        <div class="n-topbar">
+            <a href="student_dashboard.php" class="n-iconbtn" aria-label="Back"><i class="fas fa-arrow-left"></i></a>
+            <h1 class="title">Medical ID</h1>
+        </div>
+    </header>
 
-    <div class="container">
+    <main class="n-page pt-4">
 
     <?php if ($cleared): ?>
 
-        <div class="id-card">
-            <div class="id-top">
-                <img src="img/logo.png" alt="New Era University seal">
-                <div>
-                    <div class="fw-bold">NEUMed</div>
-                    <small style="opacity:.85;">NEU Medical Clearance ID</small>
+        <div class="n-id rise">
+            <div class="n-id-top">
+                <div class="d-flex align-items-center gap-3">
+                    <img class="n-id-seal" src="img/logo.png" alt="New Era University seal">
+                    <div>
+                        <div class="fw-bold" style="font-size: 1.1rem; letter-spacing: -.3px;">NEU<span style="color: var(--sun);">Med</span></div>
+                        <div class="small" style="opacity: .85;">NEU Medical Clearance ID</div>
+                    </div>
                 </div>
             </div>
 
-            <div class="id-status"><i class="fas fa-circle-check me-2"></i>MEDICALLY CLEARED</div>
+            <div class="n-id-avatar" aria-hidden="true"><?= h($initial) ?></div>
 
-            <div class="id-body">
-                <div class="id-name"><?= h($info['fullname']) ?></div>
-                <div class="text-muted small"><?= h($info['student_number'] ?: 'No student number on file') ?></div>
-                <div class="text-muted small"><?= h($info['course']) ?> &middot; <?= h($info['year']) ?></div>
-                <?php if ($info['cleared_on']): ?>
-                    <div class="small mt-2"><span class="text-muted">Cleared on</span> <strong><?= h(date('F j, Y', strtotime($info['cleared_on']))) ?></strong></div>
-                <?php endif; ?>
+            <div class="n-id-body">
+                <div class="n-id-name"><?= h($info['fullname']) ?></div>
+                <div class="n-id-status"><i class="fas fa-circle-check"></i> MEDICALLY CLEARED</div>
 
-                <div class="small text-muted mt-4">Show this screen to your professor to confirm your medical clearance.</div>
+                <div class="n-id-rows">
+                    <div><span>Student no.</span><strong><?= h($info['student_number'] ?: 'Not on file') ?></strong></div>
+                    <div><span>Program</span><strong><?= h($info['course']) ?></strong></div>
+                    <div><span>Year level</span><strong><?= h($info['year']) ?></strong></div>
+                    <?php if ($info['cleared_on']): ?>
+                        <div><span>Cleared on</span><strong><?= h(date('F j, Y', strtotime($info['cleared_on']))) ?></strong></div>
+                    <?php endif; ?>
+                </div>
             </div>
 
-            <div class="id-foot">
-                <span id="clock"></span><br>
+            <div class="n-id-stripe"></div>
+            <div class="n-id-foot">
+                <span class="n-live">LIVE</span> &nbsp;<span id="clock"></span><br>
                 Status is checked live from the NEUMed server each time this page opens.
             </div>
         </div>
-        <p class="text-center text-muted small mt-3">Tip: raise your screen brightness before showing this.</p>
+
+        <p class="text-center muted small mt-4 mb-0 rise" style="--i:2">
+            <i class="fas fa-sun me-1" style="color: var(--sun);"></i> Raise your screen brightness, then show this to your professor.
+        </p>
 
         <script>
         (function () {
@@ -107,27 +116,27 @@ if (!$cleared) {
 
     <?php else: ?>
 
-        <div class="id-card">
-            <div class="id-body">
-                <div class="locked-icon mb-3"><i class="fas fa-lock"></i></div>
-                <h5 class="fw-bold">Medical ID locked</h5>
-                <p class="text-muted small">Your ID unlocks once all requirements are approved by the University Clinic.</p>
+        <div class="n-card p-4 text-center rise">
+            <div class="n-bubble idle mx-auto mb-3" style="width: 76px; height: 76px; border-radius: 50%; font-size: 1.9rem;"><i class="fas fa-lock"></i></div>
+            <h2 class="fw-bold" style="font-size: 1.3rem;">Medical ID locked</h2>
+            <p class="muted small mb-4">It unlocks once the University Clinic approves all your requirements.</p>
 
-                <div class="text-start mt-4">
-                    <?php foreach ($checklist as $c): ?>
-                        <div class="d-flex justify-content-between align-items-center border-top py-2">
-                            <span class="small fw-bold"><?= h($c['req_name']) ?></span>
-                            <?= status_badge($c['status']) ?>
-                        </div>
-                    <?php endforeach; ?>
-                </div>
-
-                <a href="student_dashboard.php" class="btn btn-primary rounded-pill px-4 mt-4">Go to my requirements</a>
+            <div class="text-start">
+                <?php foreach ($checklist as $c):
+                    $style = $style_of[status_color($c['status'])] ?? 'idle';
+                ?>
+                    <div class="d-flex justify-content-between align-items-center py-3" style="border-top: 1px solid var(--border);">
+                        <span class="fw-bold small"><?= h($c['req_name']) ?></span>
+                        <span class="n-pill <?= $style ?>"><?= h(status_label($c['status'])) ?></span>
+                    </div>
+                <?php endforeach; ?>
             </div>
+
+            <a href="student_dashboard.php" class="n-btn n-btn-primary n-btn-block mt-3">Go to my requirements</a>
         </div>
 
     <?php endif; ?>
 
-    </div>
+    </main>
 </body>
 </html>

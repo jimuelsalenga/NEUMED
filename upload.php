@@ -95,125 +95,141 @@ if ($type !== '' && !$locked && $_SERVER['REQUEST_METHOD'] === 'POST' && isset($
         }
     }
 }
+
+// Status color (from status.php) -> pill/bubble style
+$style_of = ['success' => 'ok', 'warning' => 'wait', 'danger' => 'bad', 'secondary' => 'idle'];
+$icon_of  = ['ok' => 'fa-check', 'wait' => 'fa-hourglass-half', 'bad' => 'fa-rotate-right', 'idle' => 'fa-file-arrow-up'];
 ?>
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title><?= $type !== '' ? 'Upload ' . h($type) : 'Upload' ?> | NeuMed</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta name="theme-color" content="#137a3a">
+    <title><?= $type !== '' ? 'Upload ' . h($type) : 'Upload' ?> | NEUMed</title>
+    <script src="js/theme.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
-    <style>
-        body { background: #f7f9fc; padding-bottom: 90px; font-family: 'Segoe UI', sans-serif; }
-        .upload-area { border: 2px dashed #007bff; border-radius: 25px; padding: 40px 20px; background: #fff; text-align: center; cursor: pointer; transition: 0.3s; }
-        .upload-area:active { background: #f0f7ff; transform: scale(0.98); }
-        .btn-submit { border-radius: 15px; padding: 15px; font-weight: bold; }
-        #thumb { max-width: 100%; max-height: 220px; border-radius: 12px; }
-    </style>
+    <link rel="stylesheet" href="css/app.css">
 </head>
-<body>
+<body class="app<?= $type !== '' ? ' no-dock' : '' ?>">
 
 <?php if ($type === ''): /* ---------- Chooser: which document are you uploading? ---------- */ ?>
 
-    <div class="p-3 border-bottom bg-white text-center">
-        <h6 class="m-0 fw-bold">Upload a document</h6>
-    </div>
-    <div class="container mt-3">
-        <p class="text-muted small">Choose the requirement you want to submit.</p>
-        <?php foreach ($requirements as $name => $req): $st = $subs[$name]['status'] ?? null; ?>
-            <a href="upload.php?type=<?= urlencode($name) ?>" class="text-decoration-none text-dark">
-                <div class="card border-0 shadow-sm mb-2" style="border-radius:15px;">
-                    <div class="card-body d-flex justify-content-between align-items-center">
-                        <div>
-                            <div class="fw-bold small"><?= h($name) ?></div>
-                            <?= status_badge($st) ?>
-                        </div>
-                        <i class="fas fa-chevron-right text-primary small"></i>
-                    </div>
+    <header class="n-sticky">
+        <div class="n-topbar center"><h1 class="title">Upload</h1></div>
+    </header>
+
+    <main class="n-page pt-4">
+        <p class="muted small fw-bold mb-3">What are you submitting today?</p>
+
+        <?php $i = 0; foreach ($requirements as $name => $req):
+            $st = $subs[$name]['status'] ?? null;
+            $style = $style_of[status_color($st)] ?? 'idle';
+        ?>
+            <a href="upload.php?type=<?= urlencode($name) ?>" class="n-card n-item mb-3 rise" style="--i: <?= $i++ ?>">
+                <div class="n-bubble <?= $style ?>"><i class="fas <?= $icon_of[$style] ?>"></i></div>
+                <div class="flex-fill">
+                    <div class="title"><?= h($name) ?></div>
+                    <?php if (!empty($req['description'])): ?><div class="sub"><?= h($req['description']) ?></div><?php endif; ?>
+                    <span class="n-pill <?= $style ?>"><?= h(status_label($st)) ?></span>
                 </div>
+                <i class="fas fa-chevron-right muted small"></i>
             </a>
         <?php endforeach; ?>
+
         <?php if (!$requirements): ?>
-            <p class="text-center text-muted small mt-5">No requirements have been set up yet.</p>
+            <div class="n-empty">
+                <div class="bubble"><i class="fas fa-clipboard-list"></i></div>
+                <h2>Nothing to upload yet</h2>
+                <p class="small mb-0">No requirements have been set up.</p>
+            </div>
         <?php endif; ?>
-    </div>
+    </main>
+
     <?php include('includes/navbar.php'); ?>
 
 <?php else: /* ---------- Upload form for one requirement ---------- */ ?>
 
-    <div class="p-3 border-bottom bg-white d-flex align-items-center sticky-top">
-        <a href="student_dashboard.php" class="text-dark me-3 text-decoration-none" aria-label="Back">
-            <i class="fas fa-chevron-left"></i>
-        </a>
-        <h6 class="m-0 fw-bold">Upload <?= h($type) ?></h6>
-    </div>
+    <header class="n-sticky">
+        <div class="n-topbar">
+            <a href="student_dashboard.php" class="n-iconbtn" aria-label="Back"><i class="fas fa-arrow-left"></i></a>
+            <h1 class="title">Upload</h1>
+        </div>
+    </header>
 
-    <div class="container mt-4">
+    <main class="n-page pt-4">
+
+        <section class="mb-4 rise">
+            <h2 class="fw-bold m-0" style="font-size: 1.5rem;"><?= h($type) ?></h2>
+            <?php if (!empty($requirements[$type]['description'])): ?>
+                <p class="muted small mt-1 mb-0"><?= h($requirements[$type]['description']) ?></p>
+            <?php endif; ?>
+        </section>
+
         <?php if ($message): ?>
-            <div class="alert alert-danger rounded-4 py-2 small shadow-sm" role="alert">
-                <i class="fas fa-exclamation-circle me-2"></i><?= h($message) ?>
-            </div>
-        <?php endif; ?>
-
-        <?php if (!empty($requirements[$type]['description'])): ?>
-            <p class="text-muted small text-center mb-3"><?= h($requirements[$type]['description']) ?></p>
+            <div class="n-notice bad" role="alert"><i class="fas fa-circle-exclamation mt-1"></i><span><?= h($message) ?></span></div>
         <?php endif; ?>
 
         <?php if ($existing && is_resubmit($existing['status']) && !empty($existing['remarks'])): ?>
-            <div class="alert alert-warning border-0 shadow-sm small" style="border-radius:12px;">
-                <strong>Why this needs resubmission:</strong> <?= h($existing['remarks']) ?>
+            <div class="n-notice warn">
+                <i class="fas fa-circle-info mt-1"></i>
+                <span><strong>Why this was sent back:</strong> <?= h($existing['remarks']) ?></span>
             </div>
         <?php endif; ?>
 
         <?php if ($locked): ?>
-            <div class="alert alert-success border-0 shadow-sm small" style="border-radius:12px;">
-                <i class="fas fa-check-circle me-1"></i> This requirement is already approved. You don't need to upload it again.
+            <div class="n-card text-center p-4 rise">
+                <div class="n-bubble ok mx-auto mb-3" style="width:72px;height:72px;border-radius:50%;font-size:1.8rem;"><i class="fas fa-check"></i></div>
+                <h3 class="fw-bold" style="font-size:1.15rem;">Already approved</h3>
+                <p class="muted small">You don't need to upload this requirement again.</p>
+                <a href="student_dashboard.php" class="n-btn n-btn-primary n-btn-block">Back to Home</a>
             </div>
-            <a href="student_dashboard.php" class="btn btn-outline-primary w-100 rounded-4">Back to Home</a>
         <?php else: ?>
 
         <form action="upload.php?type=<?= urlencode($type) ?>" method="POST" enctype="multipart/form-data" id="uploadForm">
             <?= csrf_field() ?>
             <input type="hidden" name="upload" value="1">
 
-            <div class="upload-area shadow-sm mb-3" id="dropZone" role="button" tabindex="0">
-                <div class="bg-light d-inline-block p-4 rounded-circle mb-3">
-                    <i class="fas fa-file-upload fa-2x text-primary"></i>
-                </div>
-                <p class="mb-1 fw-bold">Choose a file or take a photo</p>
-                <small class="text-muted d-block">PDF, PNG, or JPG (max 5MB)</small>
+            <div class="n-drop mb-3 rise" style="--i:1" id="dropZone" role="button" tabindex="0" aria-label="Choose a file or take a photo">
+                <div class="icon"><i class="fas fa-cloud-arrow-up"></i></div>
+                <p class="fw-bold mb-1" style="font-size:1.05rem;">Tap to choose a file or take a photo</p>
+                <p class="muted small mb-0">PDF, PNG or JPG &middot; up to 5MB</p>
                 <input type="file" name="fileToUpload" id="fileInput" class="d-none" accept=".jpg,.jpeg,.png,.pdf,image/*">
             </div>
 
-            <div id="file-info" class="mb-3 text-center d-none">
-                <img id="thumb" class="mb-2 d-none" alt="Preview of the selected file">
-                <div class="d-inline-flex align-items-center bg-white border rounded-pill px-3 py-2 shadow-sm">
-                    <i class="fas fa-file-alt text-primary me-2"></i>
-                    <span class="small fw-bold text-truncate" id="file-name-display" style="max-width: 180px;"></span>
-                    <span class="small text-muted ms-2" id="file-size-display"></span>
-                    <button type="button" class="btn btn-link text-danger p-0 ms-2" id="removeFile" aria-label="Remove file">
-                        <i class="fas fa-times-circle"></i>
-                    </button>
+            <div id="file-info" class="n-preview mb-3 d-none">
+                <img id="thumb" class="d-none" alt="Preview of the selected file">
+                <div class="meta">
+                    <i class="fas fa-file-lines"></i>
+                    <div class="flex-fill" style="min-width:0;">
+                        <div class="name" id="file-name-display"></div>
+                        <div class="size" id="file-size-display"></div>
+                    </div>
+                    <button type="button" class="n-iconbtn" id="removeFile" aria-label="Remove file"><i class="fas fa-xmark"></i></button>
                 </div>
             </div>
 
-            <button type="submit" id="submitBtn" class="btn btn-primary w-100 btn-submit shadow" disabled>
-                <i class="fas fa-paper-plane me-2"></i>Submit for Review
+            <button type="submit" id="submitBtn" class="n-btn n-btn-primary n-btn-block" disabled>
+                <i class="fas fa-paper-plane"></i> Submit for review
             </button>
         </form>
 
-        <div class="mt-4 p-3 rounded-4 border-0 shadow-sm bg-white">
-            <h6 class="fw-bold small mb-2"><i class="fas fa-info-circle text-primary me-1"></i> Before you submit</h6>
-            <ul class="text-muted small mb-0 ps-3">
-                <li>Make sure the whole document is visible and the text is readable.</li>
+        <div class="n-tips mt-4 rise" style="--i:2">
+            <h3><i class="fas fa-lightbulb me-1" style="color: var(--sun);"></i> For a quick approval</h3>
+            <ul>
+                <li>Make sure the whole document is visible and readable.</li>
                 <li>Avoid blurry photos and dark lighting.</li>
-                <li>Photos are shrunk automatically so they upload quickly.</li>
+                <li>Big photos are shrunk automatically, so uploads stay fast.</li>
             </ul>
         </div>
         <?php endif; ?>
-    </div>
+    </main>
 
+    <script src="js/app.js"></script>
     <script>
     (function () {
         var input = document.getElementById('fileInput');
@@ -229,6 +245,19 @@ if ($type !== '' && !$locked && $_SERVER['REQUEST_METHOD'] === 'POST' && isset($
 
         zone.addEventListener('click', function () { input.click(); });
         zone.addEventListener('keydown', function (e) { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); input.click(); } });
+
+        // Drag and drop (handy on a laptop)
+        ['dragenter', 'dragover'].forEach(function (ev) {
+            zone.addEventListener(ev, function (e) { e.preventDefault(); zone.classList.add('drag'); });
+        });
+        ['dragleave', 'drop'].forEach(function (ev) {
+            zone.addEventListener(ev, function (e) { e.preventDefault(); zone.classList.remove('drag'); });
+        });
+        zone.addEventListener('drop', function (e) {
+            if (e.dataTransfer && e.dataTransfer.files.length) {
+                try { input.files = e.dataTransfer.files; input.dispatchEvent(new Event('change')); } catch (err) {}
+            }
+        });
 
         function fmt(b) { return b > 1048576 ? (b / 1048576).toFixed(1) + ' MB' : Math.max(1, Math.round(b / 1024)) + ' KB'; }
 
@@ -269,7 +298,7 @@ if ($type !== '' && !$locked && $_SERVER['REQUEST_METHOD'] === 'POST' && isset($
                 }
             }
             if (file.size > MAX) {
-                alert('That file is larger than 5MB. Please choose a smaller one.');
+                NeuUI.toast('That file is larger than 5MB. Please choose a smaller one.', 'fa-triangle-exclamation');
                 reset();
                 return;
             }
@@ -289,7 +318,7 @@ if ($type !== '' && !$locked && $_SERVER['REQUEST_METHOD'] === 'POST' && isset($
 
         form.addEventListener('submit', function () {
             btn.disabled = true;
-            btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Uploading...';
+            btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Uploading...';
         });
     })();
     </script>

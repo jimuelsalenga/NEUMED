@@ -229,3 +229,76 @@ body.auth::after { content: ""; position: fixed; inset: 0; z-index: -1; backgrou
 @media (prefers-reduced-motion: reduce) {
     *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; }
 }
+
+/* =========================================================
+   Batch B additions: top bars, upload, status tabs, Medical ID, notifications
+   ========================================================= */
+
+body.app.no-dock { padding-bottom: calc(40px + env(safe-area-inset-bottom)); }
+
+/* Sticky header block (title bar, optionally with tabs underneath) */
+.n-sticky {
+    position: sticky; top: 0; z-index: 1020;
+    background: var(--glass); -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px);
+    border-bottom: 1px solid var(--border);
+}
+.n-topbar { display: flex; align-items: center; gap: 12px; padding: calc(12px + env(safe-area-inset-top)) 16px 12px; max-width: 520px; margin: 0 auto; }
+.n-topbar .title { flex: 1; margin: 0; font-size: 1.1rem; font-weight: 800; letter-spacing: -.3px; }
+.n-topbar.center .title { text-align: center; }
+
+/* ---------- Upload ---------- */
+.n-drop {
+    border: 2px dashed var(--brand); border-radius: 26px; padding: 34px 20px; text-align: center;
+    background: var(--surface); cursor: pointer; transition: background .2s, transform .15s, border-color .2s;
+}
+.n-drop:hover, .n-drop.drag { background: var(--brand-soft); }
+.n-drop:active { transform: scale(.985); }
+.n-drop .icon { width: 78px; height: 78px; margin-bottom: 14px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-size: 1.9rem; background: var(--brand-soft); color: var(--brand-ink); }
+.n-preview { background: var(--surface); border: 1px solid var(--border); border-radius: 22px; padding: 12px; box-shadow: var(--shadow); }
+.n-preview img { display: block; width: 100%; max-height: 240px; object-fit: contain; border-radius: 14px; background: var(--surface-2); margin-bottom: 10px; }
+.n-preview .meta { display: flex; align-items: center; gap: 12px; }
+.n-preview .meta > i { font-size: 1.4rem; color: var(--brand-ink); }
+.n-preview .name { font-weight: 700; font-size: .9rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 200px; }
+.n-preview .size { font-size: .75rem; color: var(--muted); }
+.n-tips { background: var(--surface-2); border-radius: 20px; padding: 16px 18px; }
+.n-tips h3 { font-size: .85rem; font-weight: 800; margin: 0 0 8px; }
+.n-tips ul { margin: 0; padding-left: 18px; font-size: .82rem; color: var(--muted); }
+.n-tips li { margin-bottom: 4px; }
+
+/* ---------- Underline status tabs ---------- */
+.n-tabs { display: flex; max-width: 520px; margin: 0 auto; padding: 0 8px; overflow-x: auto; scrollbar-width: none; }
+.n-tabs::-webkit-scrollbar { display: none; }
+.n-tab { flex: 0 0 auto; padding: 12px 14px; color: var(--muted); text-decoration: none; font-size: .88rem; font-weight: 700; white-space: nowrap; border-bottom: 3px solid transparent; }
+.n-tab.active { color: var(--brand-ink); border-bottom-color: var(--brand); }
+.n-tab .tc { color: var(--brand-ink); }
+.n-tab[data-key="resubmit"] .tc { color: var(--red); }
+
+/* ---------- Medical ID ---------- */
+.n-id { position: relative; max-width: 380px; margin: 0 auto; border-radius: 30px; overflow: hidden; background: var(--surface); border: 1px solid var(--border); box-shadow: 0 22px 50px rgba(11, 90, 42, .28); }
+.n-id-top { position: relative; padding: 20px 22px 56px; color: #fff; background: linear-gradient(135deg, #137a3a, #0b5a2a); overflow: hidden; }
+.n-id-top::before { content: ""; position: absolute; right: -40px; top: -50px; width: 190px; height: 190px; border-radius: 50%; background: radial-gradient(circle, rgba(255, 207, 31, .55), rgba(255, 207, 31, 0) 70%); }
+.n-id-top > * { position: relative; }
+.n-id-seal { width: 46px; height: 46px; border-radius: 50%; background: #fff; padding: 2px; }
+.n-id-avatar { position: relative; width: 88px; height: 88px; margin: -44px auto 0; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 2.1rem; font-weight: 800; color: #0b3d20; background: linear-gradient(135deg, var(--sun), #ffb703); border: 5px solid var(--surface); }
+.n-id-body { padding: 12px 22px 22px; text-align: center; }
+.n-id-name { font-size: 1.4rem; font-weight: 800; letter-spacing: -.4px; margin: 8px 0 2px; }
+.n-id-status { display: inline-flex; align-items: center; gap: 8px; margin-top: 8px; padding: 8px 16px; border-radius: 999px; background: var(--brand-soft); color: var(--brand-ink); font-weight: 800; font-size: .78rem; letter-spacing: .8px; }
+.n-id-rows { margin-top: 18px; text-align: left; }
+.n-id-rows > div { display: flex; justify-content: space-between; gap: 12px; padding: 11px 0; border-top: 1px solid var(--border); font-size: .85rem; }
+.n-id-rows span { color: var(--muted); }
+.n-id-rows strong { text-align: right; }
+.n-id-stripe { height: 6px; background: linear-gradient(90deg, var(--brand), var(--sun), var(--red)); }
+.n-id-foot { padding: 12px 18px 16px; text-align: center; font-size: .72rem; color: var(--muted); background: var(--surface-2); }
+.n-live { display: inline-flex; align-items: center; gap: 6px; font-size: .72rem; font-weight: 800; color: var(--brand-ink); }
+.n-live::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: var(--brand); animation: pulse 1.6s infinite; }
+@keyframes pulse { 0% { box-shadow: 0 0 0 0 rgba(19, 122, 58, .55); } 70% { box-shadow: 0 0 0 9px rgba(19, 122, 58, 0); } 100% { box-shadow: 0 0 0 0 rgba(19, 122, 58, 0); } }
+
+/* ---------- Notifications + empty states ---------- */
+.n-notif { position: relative; display: flex; align-items: flex-start; gap: 14px; padding: 14px 16px; }
+.n-notif.unread { border-color: var(--brand); }
+.n-notif .dot { position: absolute; top: 16px; right: 16px; width: 9px; height: 9px; border-radius: 50%; background: var(--brand); }
+.n-notif .msg { font-size: .88rem; font-weight: 600; line-height: 1.45; padding-right: 14px; }
+.n-notif .time { margin-top: 4px; font-size: .72rem; color: var(--muted); }
+.n-empty { text-align: center; padding: 56px 24px; color: var(--muted); }
+.n-empty .bubble { width: 84px; height: 84px; margin: 0 auto 16px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 2rem; background: var(--surface-2); color: var(--muted); }
+.n-empty h2 { font-size: 1.1rem; font-weight: 800; color: var(--text); margin-bottom: 6px; }
