@@ -72,84 +72,95 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_profile'])) {
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Edit Profile | NeuMed</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta name="theme-color" content="#137a3a">
+    <title>Edit Profile | NEUMed</title>
+    <script src="js/theme.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
-    <style>
-        body { background: #f8f9fa; font-family: 'Segoe UI', sans-serif; }
-        .card-custom { background: #fff; border-radius: 25px; padding: 25px; box-shadow: 0 10px 30px rgba(0,0,0,0.02); border: none; }
-        .form-control, .form-select { border-radius: 15px; padding: 12px 15px; border: 1px solid #eee; background: #fff; font-size: 0.95rem; }
-        .readonly-field { background: #f1f3f5; color: #6c757d; cursor: not-allowed; }
-        .btn-save { background: #0d6efd; border-radius: 15px; padding: 14px; font-weight: 700; border: none; }
-        label.field { font-size: 0.8rem; font-weight: 700; color: #6c757d; margin: 0 0 6px 4px; }
-    </style>
+    <link rel="stylesheet" href="css/app.css">
 </head>
-<body>
+<body class="app no-dock">
 
-    <div class="p-3 border-bottom bg-white d-flex align-items-center sticky-top">
-        <a href="profile.php" class="text-dark me-3 text-decoration-none" aria-label="Back"><i class="fas fa-chevron-left"></i></a>
-        <h6 class="m-0 fw-bold">Edit Profile</h6>
-    </div>
+    <header class="n-sticky">
+        <div class="n-topbar">
+            <a href="profile.php" class="n-iconbtn" aria-label="Back"><i class="fas fa-arrow-left"></i></a>
+            <h1 class="title">Edit profile</h1>
+        </div>
+    </header>
 
-    <div class="container mt-4 mb-5">
-        <?php if ($saved): ?>
-            <div class="alert alert-success py-2 small border-0 shadow-sm mb-3" style="border-radius:12px;" role="status">
-                <i class="fas fa-check-circle me-1"></i> Profile updated.
-            </div>
-        <?php endif; ?>
+    <main class="n-page pt-4">
+
         <?php if ($errors): ?>
-            <div class="alert alert-danger py-2 small border-0 shadow-sm mb-3" style="border-radius:12px;" role="alert">
-                <?php foreach ($errors as $e): ?><div><?= h($e) ?></div><?php endforeach; ?>
+            <div class="n-notice bad" role="alert">
+                <i class="fas fa-circle-exclamation mt-1"></i>
+                <div><?php foreach ($errors as $e): ?><div><?= h($e) ?></div><?php endforeach; ?></div>
             </div>
         <?php endif; ?>
 
-        <div class="card-custom shadow-sm">
-            <form action="edit_profile.php" method="POST">
-                <?= csrf_field() ?>
+        <form action="edit_profile.php" method="POST" class="n-card p-4 rise">
+            <?= csrf_field() ?>
 
-                <div class="mb-3">
-                    <label class="field d-block" for="fullname">Full name</label>
-                    <input type="text" id="fullname" name="fullname" class="form-control" value="<?= h($user['fullname']) ?>" required>
+            <div class="mb-3">
+                <label class="n-label" for="fullname">Full name</label>
+                <div class="n-input has-icon">
+                    <i class="fas fa-user lead"></i>
+                    <input type="text" id="fullname" name="fullname" class="form-control n-control" autocomplete="name"
+                           value="<?= h($user['fullname']) ?>" required>
                 </div>
+            </div>
 
-                <div class="mb-3">
-                    <label class="field d-block" for="email">Email address</label>
-                    <input type="email" id="email" class="form-control readonly-field" value="<?= h($user['email']) ?>" readonly>
-                    <small class="text-muted ms-1" style="font-size: 0.75rem;">Your email is your login and can't be changed here.</small>
+            <div class="mb-3">
+                <label class="n-label" for="email">Email address</label>
+                <div class="n-input has-icon">
+                    <i class="fas fa-envelope lead"></i>
+                    <input type="email" id="email" class="form-control n-control" value="<?= h($user['email']) ?>" readonly>
                 </div>
+                <div class="form-text ms-1">Your email is your login, so it can't be changed here.</div>
+            </div>
 
-                <?php if ($isStudent): ?>
-                    <div class="mb-3">
-                        <label class="field d-block" for="student_number">Student number</label>
-                        <input type="text" id="student_number" class="form-control readonly-field"
+            <?php if ($isStudent): ?>
+                <div class="mb-3">
+                    <label class="n-label" for="student_number">Student number</label>
+                    <div class="n-input has-icon">
+                        <i class="fas fa-id-card lead"></i>
+                        <input type="text" id="student_number" class="form-control n-control"
                                value="<?= h($user['student_number'] ?: 'Not set') ?>" readonly>
                     </div>
+                </div>
 
-                    <div class="mb-3">
-                        <label class="field d-block" for="course">Program</label>
-                        <select id="course" name="course" class="form-select" required>
-                            <?php foreach ($courses as $c): ?>
-                                <option value="<?= h($c) ?>" <?= $user['course'] === $c ? 'selected' : '' ?>><?= h($c) ?></option>
-                            <?php endforeach; ?>
-                        </select>
-                    </div>
+                <div class="mb-3">
+                    <label class="n-label" for="course">Program</label>
+                    <select id="course" name="course" class="form-select n-control" required>
+                        <?php foreach ($courses as $c): ?>
+                            <option value="<?= h($c) ?>" <?= $user['course'] === $c ? 'selected' : '' ?>><?= h($c) ?></option>
+                        <?php endforeach; ?>
+                    </select>
+                </div>
 
-                    <div class="mb-4">
-                        <label class="field d-block" for="year">Year level</label>
-                        <select id="year" name="year" class="form-select" required>
-                            <?php foreach ($year_levels as $y): ?>
-                                <option value="<?= h($y) ?>" <?= $user['year'] === $y ? 'selected' : '' ?>><?= h($y) ?></option>
-                            <?php endforeach; ?>
-                        </select>
-                    </div>
-                <?php endif; ?>
+                <div class="mb-4">
+                    <label class="n-label" for="year">Year level</label>
+                    <select id="year" name="year" class="form-select n-control" required>
+                        <?php foreach ($year_levels as $y): ?>
+                            <option value="<?= h($y) ?>" <?= $user['year'] === $y ? 'selected' : '' ?>><?= h($y) ?></option>
+                        <?php endforeach; ?>
+                    </select>
+                </div>
+            <?php endif; ?>
 
-                <button type="submit" name="update_profile" class="btn btn-primary w-100 btn-save shadow">
-                    <i class="fas fa-save me-2"></i> Save changes
-                </button>
-            </form>
-        </div>
-    </div>
+            <button type="submit" name="update_profile" class="n-btn n-btn-primary n-btn-block">
+                <i class="fas fa-floppy-disk"></i> Save changes
+            </button>
+        </form>
+    </main>
+
+    <?php if ($saved): ?>
+        <span data-toast="Profile updated!" data-toast-icon="fa-circle-check" hidden></span>
+    <?php endif; ?>
+
+    <script src="js/app.js"></script>
 </body>
 </html>

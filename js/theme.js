@@ -1,7 +1,17 @@
-/* Light / dark theme. Load this in <head> (before the page paints) so there is no white flash.
-   Follows the phone's setting until the user picks a theme. Later you can add a toggle button that calls NeuTheme.toggle(). */
+/* Light / dark / auto theme. Load this in <head> (before the page paints) so there is no flash.
+   Modes:  'light', 'dark', or 'auto' (follow the phone's setting).
+   NeuTheme.setMode('dark')   NeuTheme.mode()   NeuTheme.toggle() */
 (function () {
     var KEY = 'neumed-theme', root = document.documentElement;
+    var mq = window.matchMedia ? window.matchMedia('(prefers-color-scheme: dark)') : null;
+
+    function saved() {
+        try {
+            var v = localStorage.getItem(KEY);
+            return (v === 'light' || v === 'dark') ? v : null;
+        } catch (e) { return null; }
+    }
+    function system() { return (mq && mq.matches) ? 'dark' : 'light'; }
 
     function apply(t) {
         root.setAttribute('data-theme', t);
@@ -10,14 +20,23 @@
         if (meta) meta.setAttribute('content', t === 'dark' ? '#0b1410' : '#137a3a');
     }
 
-    var saved = null;
-    try { saved = localStorage.getItem(KEY); } catch (e) {}
-    var prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
-    apply(saved || (prefersDark ? 'dark' : 'light'));
+    apply(saved() || system());
+
+    // In Auto mode, follow the phone if the user switches their phone's theme
+    if (mq && mq.addEventListener) {
+        mq.addEventListener('change', function () { if (!saved()) apply(system()); });
+    }
 
     window.NeuTheme = {
         get: function () { return root.getAttribute('data-theme'); },
-        set: function (t) { try { localStorage.setItem(KEY, t); } catch (e) {} apply(t); },
-        toggle: function () { this.set(this.get() === 'dark' ? 'light' : 'dark'); }
+        mode: function () { return saved() || 'auto'; },
+        setMode: function (m) {
+            try {
+                if (m === 'auto') localStorage.removeItem(KEY); else localStorage.setItem(KEY, m);
+            } catch (e) {}
+            apply(m === 'auto' ? system() : m);
+        },
+        set: function (t) { this.setMode(t); },
+        toggle: function () { this.setMode(this.get() === 'dark' ? 'light' : 'dark'); }
     };
 })();
